@@ -9,7 +9,7 @@ __2. Reuse the domain of Lab 1 (Online Shop).__
 __3. Implement at least 3 structural design patterns that work together and depend on abstractions.__
 
 ## Domain: Online Shop
-The domain is the online shop from Lab 1, with a desktop (Swing) window. The customer picks products from a catalog, adds them to a cart, chooses a payment method (Card, PayPal or Crypto), pays, receives a receipt and can ask for a refund when the payment method supports it. In this lab the payment step was extended with structural patterns. The Lab 1 code (Singleton, Factory Method, Prototype) is reused and not changed, except that the classes were put into packages and `ShopWindow2.pay()` now calls the facade. The Lab 1 report is in [docs/REPORT_LAB1.md](docs/REPORT_LAB1.md).
+The domain is the online shop from Lab 1, with a desktop (Swing) window. The customer picks products from a catalog, adds them to a cart, chooses a payment method (Card, PayPal or Crypto), pays, receives a receipt and can ask for a refund when the payment method supports it. In this lab the payment step was extended with structural patterns. The Lab 1 code (Singleton, Factory Method, Prototype) is reused and not changed, except that the classes were put into packages and `ShopWindow2.pay()` now calls the facade.
 
 Main classes (package `shop.*`):
 
@@ -311,7 +311,7 @@ Time: 0.037
 OK (7 tests)
 ```
 
-## Conclusions / Screenshots / Results
+## Conclusions
 In this laboratory work I studied the structural design patterns and applied them to the payment step of the online shop:
 
 * **Decorator** was applied in `PaymentDecorator`, `LoggingPayment` and `RetryPayment`. Logging and retry are added to any payment by wrapping, in any order, without changing Card, PayPal or Crypto. The tests confirmed that the amount and the name are unchanged and that retry is bounded.
