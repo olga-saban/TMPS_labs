@@ -1,3 +1,5 @@
+package main.shop.payment;
+
 // strategy pattern
 public class PayPalPayment implements Payable, Refundable {
     @Override

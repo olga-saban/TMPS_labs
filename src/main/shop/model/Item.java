@@ -1,3 +1,5 @@
+package main.shop.model;
+
 import java.util.Objects;
 
 public class Item {

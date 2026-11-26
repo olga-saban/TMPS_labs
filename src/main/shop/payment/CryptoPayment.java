@@ -1,5 +1,7 @@
+package main.shop.payment;
+
 //strategy pattern
-//doesnt implement Refundable
+//Crypto payments cannot be refunded
 public class CryptoPayment implements Payable {
     @Override
     public String getName() { return "Crypto"; }

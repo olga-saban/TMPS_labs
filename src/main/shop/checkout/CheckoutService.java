@@ -1,3 +1,9 @@
+package main.shop.checkout;
+
+import main.shop.model.Order2;
+import main.shop.payment.Payable;
+import main.shop.payment.PaymentResult;
+
 //only coordinates the payment (Single Responsibility)
 //depends on the Payable interface (Dependency inversion)
 public class CheckoutService {

@@ -1,3 +1,5 @@
+package main.shop.payment;
+
 //strategy pattern
 public class CardPayment implements Payable, Refundable {
     @Override

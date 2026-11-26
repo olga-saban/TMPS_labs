@@ -1,3 +1,5 @@
+package main.shop.ui;
+
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;

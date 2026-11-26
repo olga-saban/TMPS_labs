@@ -1,4 +1,4 @@
-//abstraction (Dependency inversion)
+package main.shop.payment;//abstraction (Dependency inversion)
 //new payment method (Open Closed)
 
 public interface Payable {

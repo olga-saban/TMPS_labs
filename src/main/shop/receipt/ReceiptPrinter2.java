@@ -1,3 +1,10 @@
+package main.shop.receipt;
+
+import main.shop.model.Item;
+import main.shop.model.Order2;
+import main.shop.payment.Payable;
+import main.shop.payment.PaymentResult;
+
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;

@@ -1,404 +1,325 @@
-# Topic: *Creational Design Patterns*
+# Topic: *Structural Design Patterns*
 Author: Saban Olga
 ------
 ## Objectives:
-__1. Get familiar with the creational design patterns.__
+__1. Get familiar with the structural design patterns.__
 
-__2. Choose a specific domain.__
+__2. Reuse the domain of Lab 1 (Online Shop).__
 
-__3. Implement at least 3 creational design patterns for the chosen domain.__
+__3. Implement at least 3 structural design patterns that work together and depend on abstractions.__
 
 ## Domain: Online Shop
-The chosen domain is an online shop with a desktop (Swing) window. The customer picks products from a catalog, adds them to a cart, chooses a payment method (Card, PayPal or Crypto), pays, receives a receipt and can ask for a refund when the payment method supports it.
+The domain is the online shop from Lab 1, with a desktop (Swing) window. The customer picks products from a catalog, adds them to a cart, chooses a payment method (Card, PayPal or Crypto), pays, receives a receipt and can ask for a refund when the payment method supports it. In this lab the payment step was extended with structural patterns. The Lab 1 code (Singleton, Factory Method, Prototype) is reused and not changed, except that the classes were put into packages and `ShopWindow2.pay()` now calls the facade. The Lab 1 report is in [docs/REPORT_LAB1.md](docs/REPORT_LAB1.md).
 
-Main classes:
+Main classes (package `shop.*`):
 
 | Class | Responsibility |
 |---|---|
-| `Main` | entry point, opens the shop window |
-| `ShopWindow2` | the main window (Swing GUI) |
-| `ItemList2` | the catalog of products, loaded from `items2.csv` |
-| `Item` | name and price of a product; it can create a copy of itself |
-| `Cart2` | what the customer selected (items and quantities); gives copies of the items for an order |
-| `Order2` | an order: generated id, items, total |
-| `Payable`, `Refundable` | interfaces of the payment methods |
-| `CardPayment`, `PayPalPayment`, `CryptoPayment` | concrete payment methods |
-| `PaymentFactory`, `CardPaymentFactory`, `PayPalPaymentFactory`, `CryptoPaymentFactory` | creators of the payment methods |
-| `PaymentFactoryProvider` | chooses the right factory by name |
-| `CheckoutService` | pays an order with the chosen payment method |
-| `ReceiptPrinter2` | builds the text of the receipt |
-| `PaymentResult` | result of a payment (success flag, transaction id) |
+| `app.Main`, `app.ConsoleDemo` | entry points: Swing window / console demo |
+| `ui.ShopWindow2` | the main window (Swing GUI); calls the facade when the customer pays |
+| `catalog.ItemList2` | the catalog of products, loaded from `items2.csv` (Lab 1, Singleton) |
+| `model.Item`, `model.Cart2`, `model.Order2` | product (with `copy()`), cart, order (Lab 1, Prototype) |
+| `payment.Payable`, `payment.Refundable` | interfaces of the payment methods; `Payable` is the common interface of all three new patterns |
+| `payment.CardPayment`, `PayPalPayment`, `CryptoPayment` | real payment methods (created by the Lab 1 factories) |
+| `decorator.PaymentDecorator`, `LoggingPayment`, `RetryPayment` | **Decorator**: add behavior around a payment |
+| `proxy.LimitedPaymentProxy` | **Proxy**: blocks payments above a limit |
+| `facade.CheckoutFacade` | **Facade**: one call that builds the chain and runs the checkout |
+| `checkout.CheckoutService` | pays an order with a `Payable` (Lab 1) |
+| `receipt.ReceiptPrinter2` | builds the text of the receipt (Lab 1, Singleton) |
 
-## Used Creational Patterns:
-* **Singleton**: `ItemList2`, `ReceiptPrinter2` and `ShopWindow2` each have exactly one instance in the application.
-* **Factory Method**: `PaymentFactory` and its three implementations decide which payment method object is created.
-* **Prototype**: `Item` creates a copy of itself with `copy()`. When an order is made, the cart asks every item for a copy, so the order does not share objects with the catalog.
+## Used Structural Patterns:
+* **Decorator**: `PaymentDecorator` with `LoggingPayment` and `RetryPayment` add logging and retry to any payment without changing the payment classes.
+* **Proxy**: `LimitedPaymentProxy` has the same interface as the real payment and decides whether a call reaches it (protection proxy).
+* **Facade**: `CheckoutFacade` gives the window one simple method `checkout(order, payment)` and hides the proxy, the decorators and the checkout service.
 
 ## Some Theory:
-Creational design patterns deal with **how objects are created**. Instead of calling `new` everywhere, the creation is hidden behind a well-defined place, so the rest of the code does not depend on the details of construction. There are six patterns in the list of this work:
+Structural design patterns deal with **how classes and objects are composed** into larger structures, so that the parts can change independently and the client works with simple abstractions. There are seven patterns in the list of this work:
 
 | Pattern | Idea | Example in this shop |
 |---|---|---|
-| **Singleton** | a class has exactly one instance and a global access point to it | the product catalog, the receipt printer, the main window |
-| **Factory Method** | an interface for creating one object, subclasses decide which class to instantiate | `PaymentFactory` creates a `Payable` (Card, PayPal or Crypto) |
-| **Abstract Factory** | an interface for creating a **family** of related objects without naming their concrete classes | a "region" factory that creates a matching payment method **and** a matching receipt format and tax rule |
-| **Builder** | builds a complex object step by step; the same steps can give different results | an `Order2` built with `addItem(...)`, `coupon(...)`, `shipping(...)`, then `build()` |
-| **Prototype** | creates a new object by copying (cloning) an existing one | `Item.copy()` gives an order its own copy of every product |
-| **Object Pool** | keeps a set of ready objects that are borrowed and returned, instead of creating and destroying them | a pool of expensive payment gateway connections |
+| **Adapter** | makes an existing class with an incompatible interface work with your code | a `Payable` adapter over a third-party bank SDK that has `makeTransfer(cents, iban)` |
+| **Bridge** | separates an abstraction from its implementation so both can vary independently | `Notification` (receipt, refund notice) x `Channel` (email, SMS) |
+| **Composite** | treats single objects and groups of objects uniformly through one interface | a product bundle that contains items and other bundles and is priced like one item |
+| **Decorator** | adds responsibilities to an object at runtime by wrapping it, in any combination | `LoggingPayment` and `RetryPayment` wrap a payment |
+| **Facade** | one simple interface to a complex subsystem | `CheckoutFacade` in front of the proxy, decorators and checkout service |
+| **Flyweight** | shares common (intrinsic) state between many fine-grained objects to save memory | one shared object for every product image/category description used by thousands of items |
+| **Proxy** | controls access to an object through a stand-in with the same interface | `LimitedPaymentProxy` in front of the real payment |
 
-The three patterns used in the project (Singleton, Factory Method and Prototype) are explained in the next sections. The other three (Abstract Factory, Builder and Object Pool) are not implemented in the code and are described only as theory.
+The three patterns used in the project (Decorator, Proxy and Facade) are explained in the next sections. The other four (Adapter, Bridge, Composite and Flyweight) are not implemented in the code and are described only as theory.
 
-**Factory Method vs Abstract Factory.** Both hide the concrete class. A Factory Method creates **one** kind of product (here: a payment method). An Abstract Factory creates **several related** products that must be used together (for example payment + receipt + tax of the same country). The factories in this project create only a `Payable`, so the pattern is **Factory Method**.
+**Decorator vs Proxy.** Both have the same interface as the object they hold. A **Decorator** adds a new responsibility (log, retry) and the client chooses and stacks decorators. A **Proxy** controls access to the object (it may refuse the call and never reach the real object) and normally manages one real object. Here `LoggingPayment` and `RetryPayment` change *what happens around* the call, while `LimitedPaymentProxy` decides *whether* the call happens.
 
 ## Project Structure:
 ```text
-src/
-├── Main.java                      (entry point)
-├── ShopWindow2.java               (main window)          <- Singleton
-├── ItemList2.java                 (catalog)               <- Singleton
-├── ReceiptPrinter2.java           (receipts)              <- Singleton
-├── items2.csv                     (product data)
-├── Item.java                      (product + copy())      <- Prototype
-├── Cart2.java                     (toItems() copies)      <- Prototype (client)
-├── Order2.java
-├── CheckoutService.java
-├── PaymentResult.java
-├── Payable.java                   (product interface)     <- Factory Method
-├── Refundable.java
-├── CardPayment.java               (concrete products)
-├── PayPalPayment.java
-├── CryptoPayment.java
-├── PaymentFactory.java            (creator interface)     <- Factory Method
-├── CardPaymentFactory.java        (concrete creators)
-├── PayPalPaymentFactory.java
-├── CryptoPaymentFactory.java
-└── PaymentFactoryProvider.java    (chooses a factory by name)
+src/main/java/shop/
+├── app/        Main.java, ConsoleDemo.java                         (entry points)
+├── ui/         ShopWindow2.java, Theme2.java                       (window, calls the facade)
+├── catalog/    ItemList2.java                                      <- Singleton (Lab 1)
+├── model/      Item.java, Cart2.java, Order2.java                  <- Prototype (Lab 1)
+├── payment/    Payable.java, Refundable.java, PaymentResult.java   (common interface)
+│               Card/PayPal/CryptoPayment.java                      (real payments)
+│               PaymentFactory*.java, PaymentFactoryProvider.java   <- Factory Method (Lab 1)
+├── decorator/  PaymentDecorator.java                               <- Decorator (base)
+│               LoggingPayment.java, RetryPayment.java              <- Decorator (concrete)
+├── proxy/      LimitedPaymentProxy.java                            <- Proxy
+├── facade/     CheckoutFacade.java                                 <- Facade
+├── checkout/   CheckoutService.java
+└── receipt/    ReceiptPrinter2.java                                <- Singleton (Lab 1)
+src/test/java/shop/   Stubs.java, decorator/DecoratorTest.java, proxy/ProxyTest.java, facade/FacadeTest.java
+items2.csv, test.sh, run.sh, pom.xml, README.md, REPORT.md, docs/
 ```
 
 ## Implementation:
 
-### 1. Singleton
-**Problem.** The product catalog must be read from the file only once, and the whole application must see the same list. The receipt printer has no state and does not need to be created again and again. The shop has one main window.
+### 1. Decorator
+**Problem.** Every payment must be loggable and repeatable on failure, but this has nothing to do with Card, PayPal or Crypto themselves. Putting `System.out` and retry loops into every payment class would duplicate code, and creating subclasses for every combination (`LoggingCardPayment`, `RetryLoggingPayPalPayment`...) would explode in number.
 
-**Solution.** The class has a private constructor, so nobody can write `new ItemList2()`, and a static `getInstance()` that always returns the same object. The project uses two variants of the pattern.
+**Solution.** `PaymentDecorator` implements `Payable` and holds another `Payable`. Each concrete decorator overrides `pay` to add its behavior and calls the wrapped object. Because a decorator *is a* `Payable`, decorators can be wrapped around each other in any order at runtime.
 
-**Variant A: initialization-on-demand holder** (`ItemList2`, `ReceiptPrinter2`). The instance lives in a private nested class `Holder`. The JVM loads `Holder` only when `getInstance()` is called for the first time, and class loading is thread-safe, so the instance is **lazy** and **thread-safe** without any `synchronized`.
+```mermaid
+classDiagram
+    class Payable {
+        <<interface>>
+        +getName() String
+        +pay(double) PaymentResult
+    }
+    class CardPayment
+    class PayPalPayment
+    class CryptoPayment
+    class PaymentDecorator {
+        <<abstract>>
+        #wrapped : Payable
+        +getName() String
+        +pay(double) PaymentResult
+    }
+    class LoggingPayment {
+        +pay(double) PaymentResult
+    }
+    class RetryPayment {
+        -attempts : int
+        +pay(double) PaymentResult
+    }
+    Payable <|.. CardPayment : ConcreteComponent
+    Payable <|.. PayPalPayment
+    Payable <|.. CryptoPayment
+    Payable <|.. PaymentDecorator : implements
+    PaymentDecorator o-- Payable : wraps (has-a)
+    PaymentDecorator <|-- LoggingPayment : extends
+    PaymentDecorator <|-- RetryPayment : extends
+```
 
+Base decorator ([PaymentDecorator.java](src/main/java/shop/decorator/PaymentDecorator.java)) and one concrete decorator ([RetryPayment.java](src/main/java/shop/decorator/RetryPayment.java)):
 ```java
-public class ItemList2 {
-    private static final class Holder {
-        private static final ItemList2 INSTANCE = new ItemList2();
-    }
+public abstract class PaymentDecorator implements Payable {
+    protected final Payable wrapped;
 
-    private final List<Item> items;
+    protected PaymentDecorator(Payable wrapped) { this.wrapped = wrapped; }
 
-    private ItemList2() {                      // nobody outside can call new
-        this(Path.of("items2.csv"));
-    }
+    @Override public String getName() { return wrapped.getName(); }
+    @Override public PaymentResult pay(double amount) { return wrapped.pay(amount); }
+}
 
-    private ItemList2(Path file) {
-        this.items = load(file);               // the file is read once
+public class RetryPayment extends PaymentDecorator {
+    @Override
+    public PaymentResult pay(double amount) {
+        PaymentResult r = super.pay(amount);                       // call the wrapped object
+        for (int i = 1; i < attempts && !r.isSuccess(); i++) r = super.pay(amount);   // added behavior
+        return r;
     }
-
-    public static ItemList2 getInstance() {
-        return Holder.INSTANCE;
-    }
-
-    public List<Item> getItems() {
-        return items;
-    }
-    // load(...) reads items2.csv, defaults() is the fallback list
 }
 ```
+The base class forwards everything, so a concrete decorator only writes what is new; the amount and the name are never changed.
 
+**Usage.** The facade stacks them: `new LoggingPayment(new RetryPayment(payment, 2))`. `CheckoutService` receives the result as a plain `Payable`.
+
+**Unit tests** ([DecoratorTest.java](src/test/java/shop/decorator/DecoratorTest.java)):
+
+| Test | What it checks |
+|---|---|
+| `retryRepeatsUntilSuccess` | a stub that fails twice is called 3 times and the result is success |
+| `retryStopsAfterMaxAttempts` | with 2 attempts and a stub that always fails, exactly 2 calls are made and the result is failure |
+| `decoratorsStackInAnyOrderAndKeepAmountAndName` | `Logging(Retry(x))` and `Retry(Logging(x))` both work; the amount reaches the real object unchanged and `getName()` is the same |
+
+**Limitations.** The decorators are not `Refundable`: wrapping a `Card` payment hides its `Refundable` interface. The window therefore uses the original payment object for refunds (see Facade).
+
+### 2. Proxy
+**Problem.** Payments above a limit must never reach the payment system (a simple anti-fraud rule), but `CheckoutService` and the real payments must not change and must not know about the rule.
+
+**Solution.** `LimitedPaymentProxy` implements `Payable`, holds the real `Payable` and checks the amount before delegating. If the amount is too high it returns a failed `PaymentResult` with the id `DENIED` and **does not call** the real object.
+
+```mermaid
+classDiagram
+    class Payable {
+        <<interface>>
+        +getName() String
+        +pay(double) PaymentResult
+    }
+    class CardPayment {
+        +pay(double) PaymentResult
+    }
+    class LimitedPaymentProxy {
+        -real : Payable
+        -limit : double
+        +pay(double) PaymentResult
+    }
+    class CheckoutService {
+        -payment : Payable
+        +checkout(Order2) PaymentResult
+    }
+    Payable <|.. CardPayment : RealSubject
+    Payable <|.. LimitedPaymentProxy : Proxy implements
+    LimitedPaymentProxy --> Payable : real (has-a)
+    CheckoutService --> Payable : client uses the interface
+```
+
+Code ([LimitedPaymentProxy.java](src/main/java/shop/proxy/LimitedPaymentProxy.java)):
 ```java
-public class ReceiptPrinter2 {
-    private static final class Holder {
-        private static final ReceiptPrinter2 INSTANCE = new ReceiptPrinter2();
+@Override
+public PaymentResult pay(double amount) {
+    if (amount > limit) {                               // access check
+        System.out.printf("[Proxy] %.2f blocked (limit %.2f)%n", amount, limit);
+        return new PaymentResult(false, DENIED);        // real object is not called
     }
-
-    private ReceiptPrinter2() { }
-
-    public static ReceiptPrinter2 getInstance() {
-        return Holder.INSTANCE;
-    }
-    // format(...) and print(...)
+    return real.pay(amount);                            // otherwise delegate unchanged
 }
 ```
+The interface is the same as the real object's, so the client cannot tell the difference; the access check happens before the delegation.
 
-`ItemList2` returns an immutable list (`List.copyOf` / `List.of`), so the shared catalog cannot be changed by the code that uses it.
-
-**Variant B: lazy initialization with `synchronized`** (`ShopWindow2`). The instance is created on the first call. `synchronized` makes sure that two threads cannot create two windows at the same time.
-
-```java
-public class ShopWindow2 extends JFrame {
-    private static ShopWindow2 instance;
-
-    public static synchronized ShopWindow2 getInstance() {
-        if (instance == null) {
-            instance = new ShopWindow2();
-        }
-        return instance;
-    }
-
-    private ShopWindow2() { /* builds the GUI */ }
-}
-```
-
-**Usage.** The singletons are taken through `getInstance()` and never created with `new`:
-
-```java
-// Main.java
-SwingUtilities.invokeLater(() -> ShopWindow2.getInstance().setVisible(true));
-
-// ShopWindow2.java
-private List<Item> catalog = ItemList2.getInstance().getItems();
-private ReceiptPrinter2 printer = ReceiptPrinter2.getInstance();
-```
-
-**Check.** Two calls and 16 threads started at the same time all received the same object:
-
+**Check** (console demo, [docs/demo-output.txt](docs/demo-output.txt)): 5 x Desktop PC = 5999.95 EUR with limit 5000:
 ```text
-ItemList2 same instance: true, items=20
-ReceiptPrinter2 same instance: true
-16 threads got the same ItemList2: true
+[Proxy] 5999.95 blocked (limit 5000.00)
+Tx ID:    DENIED
+Status:   FAILED
 ```
 
-**Comparison of the two variants.**
+**Unit tests** ([ProxyTest.java](src/test/java/shop/proxy/ProxyTest.java)):
 
-| | Holder (A) | `synchronized` (B) |
-|---|---|---|
-| Lazy | yes | yes |
-| Thread-safe | yes, guaranteed by class loading | yes, by the lock |
-| Cost of each call | none | takes the lock every time |
-| Code | one nested class | a static field and an `if` |
+| Test | What it checks |
+|---|---|
+| `blocksAmountOverLimitWithoutCallingRealPayment` | 100.01 with limit 100 gives `DENIED` and the stub's call counter stays 0 |
+| `passesAllowedCallThroughUnchanged` | 100 with limit 100 reaches the real object with the same amount; the result and `getName()` are returned unchanged |
 
-Variant A is better for `ItemList2` and `ReceiptPrinter2` because they are called often. Variant B is simple and is enough for `ShopWindow2`, which is requested only once at start-up.
+**Limitations.** The limit is one number given at construction. A real system would use a policy object (user, country, method). The proxy does not implement `Refundable`.
 
-**Limitations.** A Singleton is global state, which makes unit tests harder (a test cannot easily replace `ItemList2` with a fake catalog). The implementation is also not protected against reflection or serialization, which is acceptable for this application.
+### 3. Facade
+**Problem.** To pay, the window would need to know the whole chain: create the proxy, the decorators in the right order, the checkout service, and run them. This ties the GUI to four classes.
 
-### 2. Factory Method
-**Problem.** The shop has several payment methods and the window must create them without knowing the concrete classes. If the window contained `new CardPayment()`, `new PayPalPayment()` and so on, it would be tied to every payment class.
+**Solution.** `CheckoutFacade` offers one method. It builds the chain *proxy → logging → retry → real payment* and runs the `CheckoutService`. It contains no business rule: the limit check belongs to the proxy, retry and logging to the decorators, and paying to the service.
 
-**Solution.** `PaymentFactory` is the creator interface. Its method `createPayment()` is the factory method: each concrete factory decides which `Payable` it returns.
-
-```java
-// the creator (Factory Method)
-public interface PaymentFactory {
-    Payable createPayment();
-    String getName();
-}
-```
-
-```java
-// concrete creators
-final class CardPaymentFactory implements PaymentFactory {
-    @Override public Payable createPayment() { return new CardPayment(); }
-    @Override public String getName() { return "Card"; }
-}
-
-final class PayPalPaymentFactory implements PaymentFactory {
-    @Override public Payable createPayment() { return new PayPalPayment(); }
-    @Override public String getName() { return "PayPal"; }
-}
-
-final class CryptoPaymentFactory implements PaymentFactory {
-    @Override public Payable createPayment() { return new CryptoPayment(); }
-    @Override public String getName() { return "Crypto"; }
-}
-```
-
-```java
-// the products
-public interface Payable {
-    String getName();
-    PaymentResult pay(double amount);
-}
-
-public class CardPayment implements Payable, Refundable { /* ... */ }
-public class PayPalPayment implements Payable, Refundable { /* ... */ }
-public class CryptoPayment implements Payable { /* no refund */ }
-```
-
-**Choosing a factory.** `PaymentFactoryProvider` is a small helper with a private constructor. It turns a text name into the right factory and can create all the payment methods at once:
-
-```java
-final class PaymentFactoryProvider {
-    private PaymentFactoryProvider() { }
-
-    public static PaymentFactory getFactory(String type) {
-        String normalized = type == null ? "" : type.trim().toLowerCase(Locale.ROOT);
-        switch (normalized) {
-            case "card":   return new CardPaymentFactory();
-            case "paypal": return new PayPalPaymentFactory();
-            case "crypto": return new CryptoPaymentFactory();
-            default:
-                throw new IllegalArgumentException("Unsupported payment type: " + type);
-        }
+```mermaid
+classDiagram
+    class CheckoutFacade {
+        -limit : double
+        +checkout(Order2, Payable) PaymentResult
     }
-
-    public static List<Payable> createAll() {
-        return List.of(
-                getFactory("card").createPayment(),
-                getFactory("paypal").createPayment(),
-                getFactory("crypto").createPayment());
+    class ShopWindow2
+    class LimitedPaymentProxy
+    class LoggingPayment
+    class RetryPayment
+    class CheckoutService
+    class Payable {
+        <<interface>>
     }
+    ShopWindow2 --> CheckoutFacade : only dependency
+    CheckoutFacade ..> LimitedPaymentProxy : creates
+    CheckoutFacade ..> LoggingPayment : creates
+    CheckoutFacade ..> RetryPayment : creates
+    CheckoutFacade ..> CheckoutService : uses
+    LimitedPaymentProxy ..|> Payable
+    LoggingPayment ..|> Payable
+    RetryPayment ..|> Payable
+```
+
+Code ([CheckoutFacade.java](src/main/java/shop/facade/CheckoutFacade.java)):
+```java
+public PaymentResult checkout(Order2 order, Payable payment) {
+    Payable chain = new LimitedPaymentProxy(
+            new LoggingPayment(new RetryPayment(payment, 2)), limit);
+    return new CheckoutService(chain).checkout(order);   // client code uses only the Payable interface
 }
 ```
+The window passes the order and the payment; everything else is hidden.
 
-**Usage.** The window gets all the methods from the provider and fills the payment combo box with them. It only knows the `Payable` interface:
-
-```java
-// ShopWindow2.java
-private List<Payable> methods = PaymentFactoryProvider.createAll();
-...
-for (Payable m : methods) paymentBox.addItem(m.getName());
-...
-Payable payment = methods.get(paymentBox.getSelectedIndex());
-CheckoutService service = new CheckoutService(payment);   // works with the interface
-```
-
-**Check.**
-
-```text
-factory=PayPalPaymentFactory (PayPal) -> product=PayPalPayment
-getFactory("card")    -> CardPayment
-getFactory("PayPal ") -> PayPalPayment        (spaces and capital letters are normalized)
-getFactory("CRYPTO")  -> CryptoPayment
-getFactory("cash")    -> Unsupported payment type: cash
-createAll(): Card PayPal Crypto
-```
-
-**Why it is Factory Method and not Abstract Factory.** Every factory creates a single product type, `Payable`. There is no second product (for example a receipt or a fee calculator) that must match it. That is the Factory Method structure: one creator interface, several concrete creators, one product hierarchy.
-
-**Limitations.** `PaymentFactoryProvider.getFactory` contains a `switch`, so adding a fourth payment method needs a new product class, a new factory class **and** one new `case` in the provider. The creation of the payment method itself is closed for modification (the window and `CheckoutService` do not change), but the provider is not.
-
-### 3. Prototype
-**Problem.** The catalog is a Singleton, so its `Item` objects are shared by the whole application. When the customer pays, an `Order2` is created from the cart. If the order kept references to the catalog objects, the order and its receipt would depend on shared objects: a later change of a catalog item could silently change an old order. The order must keep the products exactly as they were at the moment of the purchase.
-
-**Solution.** `Item` knows how to create a new object with the same data, so the code that needs a duplicate does not have to read every field and call the constructor itself. This is the idea of the Prototype pattern: a new object is made by copying an existing one.
-
-```java
-public class Item {
-    private final String name;
-    private final double price;
-
-    public Item(String name, double price) {
-        this.name = name;
-        this.price = price;
-    }
-
-    //Prototype: the item creates a new object with the same data
-    public Item copy() { return new Item(name, price); }
-    // getters, equals, hashCode
-}
-```
-
-`Cart2` stores the items that the customer selected (the catalog objects, with quantities). When an order is created, `toItems()` makes one **copy** for every piece:
-
-```java
-//flat list of items (repeated by quantity) used to build an Order
-public List<Item> toItems() {
-    List<Item> result = new ArrayList<>();
-    for (Map.Entry<Item, Integer> e : lines.entrySet()) {
-        for (int i = 0; i < e.getValue(); i++) result.add(e.getKey().copy());
-    }
-    return result;
-}
-```
-
-**Usage.** The window passes the copies to the order:
-
+**Usage.**
 ```java
 // ShopWindow2.java, pay()
-Order2 order = new Order2(cart2.toItems());
+Payable payment = methods.get(paymentBox.getSelectedIndex());      // made by Factory Method (Lab 1)
+Order2 order = new Order2(cart2.toItems());                        // copies (Prototype, Lab 1)
+PaymentResult result = new CheckoutFacade(5000).checkout(order, payment);
 ```
+Refund still uses the original `payment` object, so the Refund button works as in Lab 1 (Card and PayPal yes, Crypto no).
 
-**Check.** A cart with 1 x Keyboard and 2 x Mouse:
+**Unit tests** ([FacadeTest.java](src/test/java/shop/facade/FacadeTest.java)):
 
-```text
-copy != original: true, same name: true, same price: true, same class: true
-cart lines (the cart keeps catalog objects): 2, count=3
-toItems(): 3 items, none of them is a catalog object: true
-the two mouse entries are different objects: true
-```
+| Test | What it checks |
+|---|---|
+| `facadePaysThroughTheChainWithRetry` | a stub that fails once is called twice (retry decorator inside the facade), the result is success and the amount is 50 |
+| `facadeBlocksOverLimitThroughProxy` | 500 with limit 100 gives `DENIED` and the stub is never called |
 
-**Consequence: `equals` and `hashCode`.** After copying, two mice in an order are two different objects. `ReceiptPrinter2` groups the lines of a receipt with a `Map<Item, Integer>`, and a map without `equals`/`hashCode` treats different objects as different keys. The receipt then shows `Mouse 1 x 29.99` twice instead of `Mouse 2 x 29.99`. For this reason `Item` compares its objects by **name and price**:
-
-```java
-@Override
-public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof Item)) return false;
-    Item other = (Item) o;
-    return Double.compare(price, other.price) == 0 && name.equals(other.name);
-}
-
-@Override
-public int hashCode() { return Objects.hash(name, price); }
-```
-
-**Why a copy method and not `clone()`.** Java has the `Cloneable` interface and `Object.clone()`, but they are considered error-prone: the `final` fields of `Item` are awkward to copy with `clone()`, and `clone()` skips the constructor. A `copy()` method that calls the constructor is simple and explicit.
-
-**Limitations.** This is the simplest form of the pattern. There is no common `Prototype` interface, and `Cart2` calls `copy()` on the concrete class `Item`. The copy is shallow, which is enough here because the fields are a `String` and a `double`, which cannot change. In fact `Item` is immutable, so sharing it would also be safe at the moment; the copy protects the order if `Item` ever becomes mutable (for example, a discount applied to the item of one order must not change the catalog).
+**Limitations.** The chain and the numbers (retry 2, limit) are fixed inside the facade; a new decorator needs a one-line change in the facade (a configurable list of wrappers would remove it).
 
 ### How the patterns work together
-When the program starts, `Main` takes the window from the Singleton. The window takes the catalog and the receipt printer from the Singletons, and the payment methods from the Factory Method. When the customer pays, the cart gives the order copies of the items (Prototype). The shopping flow runs without any `new` of a payment class:
+When the customer presses **Pay**, the window calls one facade method. The facade builds the chain from the Proxy and the Decorators around the real payment (which the Lab 1 Factory Method created), and `CheckoutService` runs it through the `Payable` interface. The receipt is then printed by the Singleton `ReceiptPrinter2`:
 
 ```text
-Main -> ShopWindow2.getInstance()
-          |-- ItemList2.getInstance()            (Singleton: catalog)
-          |-- ReceiptPrinter2.getInstance()      (Singleton: receipts)
-          |-- PaymentFactoryProvider.createAll() (Factory Method: Card, PayPal, Crypto)
-          '-- pay(): new Order2(cart2.toItems()) (Prototype: Item.copy() for every piece)
+ShopWindow2.pay()
+   |-- cart2.toItems()                        (Prototype, Lab 1: copies of the items)
+   '-- CheckoutFacade.checkout(order, payment)               <- Facade
+          '-- CheckoutService.checkout(order)
+                 '-- LimitedPaymentProxy.pay(amount)         <- Proxy: block or delegate
+                        '-- LoggingPayment.pay(amount)       <- Decorator
+                               '-- RetryPayment.pay(amount)  <- Decorator
+                                      '-- CardPayment.pay(amount)   (created by PaymentFactoryProvider)
 ```
+Every arrow uses the `Payable` interface, so **client code depends on abstractions**, and a new decorator, a new proxy or a new payment method is added with new classes only (for example a `FeeDecorator`, or a `PaymentFactory` for a new method).
 
 ## Running the Project:
-The application is a Swing window, so it needs a desktop session. Run it **from the `src` folder**, because `ItemList2` reads `items2.csv` from the current directory:
+Java 17 or newer. Run everything **from the project root** (`items2.csv` is read from the current directory; otherwise the 20 built-in products are used):
 
 ```bash
-cd src
-javac *.java
-java Main
+./test.sh        # compiles and runs all unit tests (one command, offline, JUnit jars in lib/)
+./run.sh demo    # console demo: two orders, one paid and one blocked by the proxy
+./run.sh gui     # Swing window (needs a desktop session)
+mvn test         # alternative, with network access
 ```
 
-If the program is started from another folder (for example the project root in an IDE), `items2.csv` is not found and the catalog falls back to the same 20 products that are built into `ItemList2.defaults()`.
-
-How to use it:
-1. Select a product in the **Products** list and press **Add to cart**. The same product added again increases its quantity.
-2. **Remove one** decreases the quantity of the selected cart line.
-3. Choose a payment method in the combo box (Card, PayPal, Crypto) and press **Pay**. The receipt appears in the text area at the bottom.
-4. **Refund** is enabled only after a successful payment with Card or PayPal. Crypto does not implement `Refundable`, so the button stays disabled.
-
-### Example: payment with a card
-Cart: 1 x Keyboard and 2 x Mouse, payment method Card (output of the same classes used by the window):
-
+### Example: payment with a card (console demo)
 ```text
-[Card] Charged 119.97 EUR
+=== 2 x Keyboard by card ===
+[LOG] paying 119.98 with Card
+[Card] Charged 119.98 EUR
+[LOG] result: OK CARD-001
 --- RECEIPT ---
 Order:    A-0001
 Method:   Card
 Tx ID:    CARD-001
 ------------------------------------
-Keyboard                1 x    59.99
-Mouse                   2 x    29.99
+Keyboard                2 x    59.99
 ------------------------------------
-Amount:   119.97 EUR
+Amount:   119.98 EUR
 Status:   PAID
 ------------------------------------
 ```
 
+### Test results
+`./test.sh` (full log: [docs/test-output.txt](docs/test-output.txt)):
 ```text
-Card refundable: true, Crypto refundable: false
+JUnit version 4.13.2
+.......
+Time: 0.037
+
+OK (7 tests)
 ```
 
-<!-- Screenshots: add screenshots of the main window, a receipt and a refund here. -->
-
 ## Conclusions / Screenshots / Results
-In this laboratory work I studied the creational design patterns and applied them in an online shop:
+In this laboratory work I studied the structural design patterns and applied them to the payment step of the online shop:
 
-* **Singleton** was applied to `ItemList2`, `ReceiptPrinter2` and `ShopWindow2`. The catalog is read from the file once, and the whole application uses the same catalog, printer and window. Two variants were used: the initialization-on-demand holder (lazy and thread-safe without locking) and lazy initialization with `synchronized`. The test with 16 threads confirmed that only one instance exists.
-* **Factory Method** was applied through `PaymentFactory` and its three implementations. The window and `CheckoutService` work only with the `Payable` interface and never create a payment class with `new`.
-* **Prototype** was applied in `Item.copy()` and `Cart2.toItems()`. Every order receives its own copies of the products instead of the shared catalog objects. Because the copies are different objects, `Item` needed `equals` and `hashCode`, otherwise the receipt did not group the equal lines.
+* **Decorator** was applied in `PaymentDecorator`, `LoggingPayment` and `RetryPayment`. Logging and retry are added to any payment by wrapping, in any order, without changing Card, PayPal or Crypto. The tests confirmed that the amount and the name are unchanged and that retry is bounded.
+* **Proxy** was applied in `LimitedPaymentProxy`. It has the same `Payable` interface as the real payment and blocks amounts above the limit without calling the real object; allowed calls pass through unchanged.
+* **Facade** was applied in `CheckoutFacade`. The window makes one call and does not know about the proxy, the decorators or the service.
 
-The other creational patterns (Abstract Factory, Builder and Object Pool) were studied in the theory section, with a possible use of each one in this shop. The main limitations of the current solution are the global state introduced by the Singletons, which makes testing harder, the `switch` in `PaymentFactoryProvider`, which has to be edited when a new payment method is added, and the simplified form of the Prototype (no common interface, and a copy of an immutable class). The payments are simulated and always succeed, because the goal of the work is the structure of object creation and not the shop features.
+The three patterns are used in one execution path (window → facade → proxy → decorators → real payment) together with the Lab 1 patterns (Factory Method creates the payment, Prototype gives the order its copies, Singleton prints the receipt). The other structural patterns (Adapter, Bridge, Composite and Flyweight) were studied in the theory section, with a possible use of each one in this shop.
+
+What was harder than expected: the Lab 1 classes were in the default package and had to be moved into packages before they could be separated into folders; and keeping Decorator and Proxy clearly different, because both implement the same interface and hold the same type. Also, wrapping a payment hides its `Refundable` interface, so refunds use the original object.
+
+What I would design differently: build the chain from a configurable list of wrappers instead of hard-coding it in the facade; replace the single limit by a policy object; make `Refundable` pass through the wrappers; make `ReceiptPrinter2` an interface so the facade can be tested with a mock instead of the Singleton; and add an Adapter for a real third-party payment SDK (the lab's `legacy-lib` was not part of the supplied files). The payments are simulated and always succeed, because the goal of the work is the structure of the code and not the shop features.

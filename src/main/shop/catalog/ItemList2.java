@@ -1,3 +1,7 @@
+package main.shop.catalog;
+
+import main.shop.model.Item;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

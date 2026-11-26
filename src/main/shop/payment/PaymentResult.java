@@ -1,3 +1,5 @@
+package main.shop.payment;
+
 public class PaymentResult {
     private final boolean success;
     private final String transactionId;

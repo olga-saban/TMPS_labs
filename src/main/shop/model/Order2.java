@@ -1,3 +1,5 @@
+package main.shop.model;
+
 import java.util.List;
 
 public class Order2 {
